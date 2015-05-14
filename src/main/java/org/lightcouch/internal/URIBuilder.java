@@ -54,17 +54,33 @@ public class URIBuilder {
 
 	public URI build() {
 		try {
+			StringBuilder queryBuilder = new StringBuilder(encodeQuery(query.toString()));
+
 			for (int i = 0; i < qParams.size(); i++) {
 				String amp = (i != qParams.size() - 1) ? "&" : "";
-				query.append(qParams.get(i) + amp);
+				String param;
+				String queryParam = qParams.get(i);
+				int firstEqualsIndex = queryParam.indexOf('=');
+
+				/* If the current element of qParams contains two elements separated by an '=' character,
+				   encode the portions of queryParam before and after the first '=' character. */
+				if (firstEqualsIndex != -1 && firstEqualsIndex < queryParam.length() - 1) {
+					String encodedKey = encodeQueryParameter(queryParam.substring(0, firstEqualsIndex));
+					String encodedValue = encodeQueryParameter(queryParam.substring(firstEqualsIndex + 1));
+					param = String.format("%s=%s", encodedKey, encodedValue);
+				} else {
+					param = qParams.get(i);
+				}
+				queryBuilder.append(param + amp);
 			}
-			String q = (query.length() == 0) ? null : query.toString();
-			return new URI(scheme, null, host, port, path, q, null);
+			String q = (queryBuilder.length() == 0) ? "" : "?" + queryBuilder.toString();
+			String uriString = String.format("%s://%s:%s%s%s", scheme, host, port, path, q);
+			return new URI(uriString);
 		} catch (URISyntaxException e) {
 			throw new IllegalArgumentException(e);
 		}
 	}
-	
+
 	public URI buildEncoded() {
 		for (int i = 0; i < qParams.size(); i++) {
 			String amp = (i != qParams.size() - 1) ? "&" : "";
@@ -125,5 +141,31 @@ public class URIBuilder {
 			this.qParams.addAll(params.getParams());
 		return this;
 	}
-	
+
+	private String encodeQueryParameter(String in) {
+        // As this is to escape individual parameters, we need to
+        // escape &, = and +.
+        return encodeQuery(in)
+                .replace("&", "%26") // encode qs separators
+                .replace("=", "%3D")
+                .replace("+", "%2B");
+	}
+
+	private String encodeQuery(String in) {
+		try {
+			URI uri = new URI(
+					null, // scheme
+					null, // authority
+					null, // path
+					in,   // query
+					null  // fragment
+			);
+			return uri.toASCIIString()
+					.substring(1); // remove leading ?;
+		} catch (URISyntaxException e) {
+			throw new RuntimeException(
+					"Couldn't encode query parameter " + in,
+					e);
+		}
+	}
 }
