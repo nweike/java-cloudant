@@ -36,7 +36,7 @@ public class URIBuilder {
 	private String host;
 	private int port;
 	private String path = "";
-	private String pathToEncode = "";
+	private String encodedPath = "";
 	/* The final query */
 	private final StringBuilder query = new StringBuilder();
 	/* key=value params */
@@ -72,7 +72,7 @@ public class URIBuilder {
 		}
 		try {
 			String q = (query.length() == 0) ? "" : "?" + query;
-			String uri = String.format("%s://%s:%s%s%s%s", new Object[]{scheme, host, port, path, pathToEncode, q});
+			String uri = String.format("%s://%s:%s%s%s%s", new Object[]{scheme, host, port, path, encodedPath, q});
 			return new URI(uri);
 		} catch (URISyntaxException e) {
 			throw new IllegalArgumentException(e);
@@ -101,7 +101,7 @@ public class URIBuilder {
 	
 	public URIBuilder pathToEncode(String path) {
 		try {
-			pathToEncode = URLEncoder.encode(path, "UTF-8");
+			encodedPath = URLEncoder.encode(path, "UTF-8");
 		} catch (UnsupportedEncodingException e) {
 			throw new IllegalArgumentException(e);
 		}
