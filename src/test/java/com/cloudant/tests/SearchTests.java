@@ -3,6 +3,7 @@ package com.cloudant.tests;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ import com.cloudant.client.api.model.DesignDocument;
 import com.cloudant.client.api.model.SearchResult;
 import com.cloudant.client.api.model.SearchResult.SearchResultRows;
 import com.cloudant.tests.util.Utils;
+import org.lightcouch.internal.URIBuilder;
 
 public class SearchTests {
 
@@ -203,6 +205,44 @@ public class SearchTests {
 		
 	}
 
-	
-	
+	private void escapingTest(String expectedResult, String query) {
+		Search srch = db.search("views101/animals");
+		SearchResult<Animal> rslt= srch.includeDocs(true)
+				.querySearchResult(query, Animal.class);
+
+		Properties props = Utils.getProperties("cloudant.properties", log);
+		String cloudantAccount = props.getProperty("cloudant.account");
+
+		URIBuilder uriBuilder = new URIBuilder();
+		uriBuilder.scheme("https");
+		uriBuilder.host(cloudantAccount + ".cloudant.com");
+		uriBuilder.port(443);
+		uriBuilder.path("/animaldb/_design/views101/_search/animals");
+		uriBuilder.query("include_docs", new Boolean(true));
+		uriBuilder.query("q", query);
+		URI uri = uriBuilder.build();
+
+		String uriBaseString = account.getBaseUri().toASCIIString();
+
+		final String expectedUriString = uriBaseString + "animaldb/_design/views101/_search/animals?include_docs=true&q=" + expectedResult;
+
+		String uriString = uri.toASCIIString();
+		assertEquals(expectedUriString, uriString);
+	}
+
+	@Test
+	public void escapedPlusTest() {
+		escapingTest("class:mammal%2Btest%2Bescaping", "class:mammal+test+escaping");
+	}
+
+	@Test
+	public void escapedEqualsTest() {
+		escapingTest("class:mammal%3Dtest%3Descaping", "class:mammal=test=escaping");
+	}
+
+	@Test
+	public void escapedAmpersandTest() {
+		escapingTest("class:mammal%26test%26escaping", "class:mammal&test&escaping");
+	}
+
 }
